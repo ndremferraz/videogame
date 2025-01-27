@@ -56,7 +56,7 @@ target_include_directories(videogame PRIVATE
 # Add any user requested libraries
 target_link_libraries(videogame 
         hardware_i2c
-        )
+        hardware_adc)
 
 pico_add_extra_outputs(videogame)
 
