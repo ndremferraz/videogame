@@ -3,36 +3,37 @@
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
 
-#define ABUTTON 21
-#define BBUTTON 20
-#define CBUTTON 19
-#define DBUTTON 18
+#define GREENBUTTON 11
+#define YELLOWBUTTON 12
+#define REDBUTTON 13
+#define BLUEBUTTON 9
 
 
 int main()
 {
     stdio_init_all();
 
-    gpio_init(ABUTTON);
-    gpio_init(BBUTTON);
-    gpio_init(CBUTTON);
-    gpio_init(DBUTTON);
+    gpio_init(GREENBUTTON);
+    gpio_init(YELLOWBUTTON);
+    gpio_init(REDBUTTON);
+    gpio_init(BLUEBUTTON);
+    
 
-    gpio_set_dir(ABUTTON, GPIO_IN);
-    gpio_set_dir(BBUTTON, GPIO_IN);
-    gpio_set_dir(CBUTTON, GPIO_IN);
-    gpio_set_dir(DBUTTON, GPIO_IN);
+    gpio_set_dir(GREENBUTTON, GPIO_IN);
+    gpio_set_dir(YELLOWBUTTON, GPIO_IN);
+    gpio_set_dir(REDBUTTON, GPIO_IN);
+    gpio_set_dir(BLUEBUTTON, GPIO_IN);
 
     bool a_pressed, b_pressed, c_pressed, d_pressed = false;
 
     while (true) {
-        a_pressed = gpio_get(ABUTTON);
-        b_pressed = gpio_get(BBUTTON);
-        c_pressed = gpio_get(CBUTTON);
-        d_pressed = gpio_get(DBUTTON);
+        a_pressed = gpio_get(GREENBUTTON);
+        b_pressed = gpio_get(YELLOWBUTTON);
+        c_pressed = gpio_get(REDBUTTON);
+        d_pressed = gpio_get(BLUEBUTTON);
 
 
-        printf("Hello, world!\n");
-        sleep_ms(1000);
+        printf("GREEN: %d, YELLOW: %d, RED: %d, BLUE: %d\n", a_pressed, b_pressed, c_pressed, d_pressed);
+        sleep_ms(200);
     }
 }
