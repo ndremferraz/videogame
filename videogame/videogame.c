@@ -13,27 +13,17 @@
 #define XJOYSTICK 27
 #define YJOYSTICK 26
 
+#define SCREEN_ADDRESS 61
+
 void init_gpios();
 
-bool reserved_addr(uint8_t addr){
-    return (addr & 0x78) == 0 || (addr & 0x78) == 0x78;
-}
+void i2c_setup();
 
 int main()
 {
     stdio_init_all();
-
     init_gpios();
-
-    i2c_init(i2c_default, 100 * 1000);
-    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
-    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
-
-    bi_decl(bi_2pins_with_func(PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C));
-
-
+    i2c_setup();
     adc_init();
 
     adc_gpio_init(XJOYSTICK);
@@ -52,33 +42,12 @@ int main()
         x_read = adc_read();
         y_read = adc_read();
 
-        printf("\nI2C Bus Scan\n");
-        printf("   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\n");
+        int ret;
+        uint8_t rxdata;
 
-        for (int addr = 0; addr < (1 << 7); ++addr) {
-            if (addr % 16 == 0) {
-                printf("%02x ", addr);
-            }
+        ret = i2c_read_blocking(i2c_default, SCREEN_ADDRESS, &rxdata, 1, false);
 
-            // Perform a 1-byte dummy read from the probe address. If a slave
-            // acknowledges this address, the function returns the number of bytes
-            // transferred. If the address byte is ignored, the function returns
-            // -1.
-
-            // Skip over any reserved addresses.
-            int ret;
-            uint8_t rxdata;
-            if (reserved_addr(addr))
-                ret = PICO_ERROR_GENERIC;
-            else
-                ret = i2c_read_blocking(i2c_default, addr, &rxdata, 1, false);
-
-            printf(ret < 0 ? "." : "@");
-            printf(addr % 16 == 15 ? "\n" : "  ");
-        }
-        printf("Done.\n");
-
-
+        ret > 0 ? printf("I2C Display found") : printf("I2C Display not found");
         printf("GREEN:%d YELLOW:%d RED:%d BLUE:%d X:%d Y:%d\n", a_pressed, b_pressed, c_pressed, d_pressed, x_read, y_read);
         sleep_ms(2000);
     }
@@ -99,4 +68,15 @@ void init_gpios(){
     gpio_set_dir(REDBUTTON, GPIO_IN);
     gpio_set_dir(BLUEBUTTON, GPIO_IN);
 
+}
+
+void i2c_setup(){
+
+    i2c_init(i2c_default, 100 * 1000);
+    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
+    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
+
+    bi_decl(bi_2pins_with_func(PICO_DEFAULT_I2C_SDA_PIN, PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C));
 }
