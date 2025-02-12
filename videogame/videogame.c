@@ -5,6 +5,7 @@
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
 #include "hardware/i2c.h"
+#include "ssd1306.h"
 
 //pins 10 and 13 are likely burned :)
 //Definitions for the buttons and joystick
@@ -19,9 +20,6 @@
 //Definition for the Deadzone in the Joystick
 #define DEADZONELOWERSIDE 1000
 #define DEADZONEHIGHERSIDE 3000
-
-//Address of the I2C display
-#define SCREEN_ADDRESS 61
 
 //basic struct for each player
 struct player{
@@ -178,6 +176,7 @@ int main()
     i2c_setup();
     adc_init();
 
+    SSD1306_init();
 
     adc_gpio_init(XJOYSTICK);
     adc_gpio_init(YJOYSTICK);
@@ -192,6 +191,20 @@ int main()
     struct player enemy1 = {rand_spawn('x'),rand_spawn('y'),true};
     struct player enemy2 = {rand_spawn('x'),rand_spawn('y'),true};
 
+    struct render_area frame_area = {
+        start_col: 0,
+        end_col : SSD1306_WIDTH - 1,
+        start_page : 0,
+        end_page : SSD1306_NUM_PAGES - 1
+    };
+
+    calc_render_area_buflen(&frame_area);
+
+    // zero the entire display
+    uint8_t buf[SSD1306_BUF_LEN];
+    memset(buf, 0, SSD1306_BUF_LEN);
+    render(buf, &frame_area);
+
     while (true) {
         a_pressed = gpio_get(GREENBUTTON);
         b_pressed = gpio_get(YELLOWBUTTON);
@@ -201,8 +214,6 @@ int main()
         x_read = adc_read();
         y_read = adc_read();
 
-        int ret;
-        uint8_t rxdata;
 
         player_move(x_read, y_read, &p1, d_pressed, b_pressed);
         rand_move(&enemy1);
@@ -210,13 +221,22 @@ int main()
         player_shoot(&p1, &enemy1, &enemy2,a_pressed,c_pressed);
         
 
-        ret = i2c_read_blocking(i2c_default, SCREEN_ADDRESS, &rxdata, 1, false);
 
-        ret > 0 ? printf("I2C Display found ") : printf("I2C Display not found ");
         printf("GREEN:%d YELLOW:%d RED:%d BLUE:%d X:%d Y:%d\n", a_pressed, b_pressed, c_pressed, d_pressed, x_read, y_read);
         printf("Player 1 pos: x = %d y = %d\n", p1.x_pos, p1.y_pos);
         printf("Enemy 1 pos: x = %d y = %d alive: %d\n", enemy1.x_pos, enemy1.y_pos, enemy1.alive);
         printf("Enemy 2 pos: x = %d y = %d alive: %d\n", enemy2.x_pos, enemy2.y_pos, enemy2.alive);
+
+
+        // intro sequence: flash the screen 3 times
+        for (int i = 0; i < 3; i++) {
+            SSD1306_send_cmd(SSD1306_SET_ALL_ON);    // Set all pixels on
+            sleep_ms(500);
+            SSD1306_send_cmd(SSD1306_SET_ENTIRE_ON); // go back to following RAM for pixel state
+            sleep_ms(500);
+        }
+
+
         sleep_ms(500);
     }
 }
