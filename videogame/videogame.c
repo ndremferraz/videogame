@@ -6,6 +6,7 @@
 #include "hardware/adc.h"
 #include "hardware/i2c.h"
 #include "ssd1306.h"
+#include "character_images.h"
 
 //pins 10 and 13 are likely burned :)
 //Definitions for the buttons and joystick
@@ -20,6 +21,12 @@
 //Definition for the Deadzone in the Joystick
 #define DEADZONELOWERSIDE 1000
 #define DEADZONEHIGHERSIDE 3000
+
+//Alligns the chracter left up
+#define CHARACTER_PADDING_LEFT_UP 0
+#define CHARACTER_PADDING_DOWN_RIGHT 7 
+#define DASH_MOV 3
+
 
 //basic struct for each player
 struct player{
@@ -63,18 +70,18 @@ void i2c_setup(){
 void player_move(uint16_t x_mov, uint16_t y_mov, struct player *p1, bool dash, bool stop){
     if(!stop){
         //dash_multiplier is used to control the dash movement and limit bounds accordingly
-        uint8_t dash_multiplier = dash ? 3 : 1; 
+        uint8_t dash_multiplier = dash ? DASH_MOV : 1; 
 
         if(x_mov < DEADZONELOWERSIDE){
 
-            if(p1->x_pos - dash_multiplier >= 2){
+            if(p1->x_pos - dash_multiplier > CHARACTER_PADDING_LEFT_UP){
                 p1->x_pos -= dash_multiplier;
             }
 
         } 
         if(x_mov > DEADZONEHIGHERSIDE) {
 
-            if (p1->x_pos + dash_multiplier <= 126){
+            if (p1->x_pos + dash_multiplier < SSD1306_WIDTH - CHARACTER_PADDING_DOWN_RIGHT){
                 p1->x_pos += dash_multiplier;
             }
         
@@ -82,14 +89,14 @@ void player_move(uint16_t x_mov, uint16_t y_mov, struct player *p1, bool dash, b
 
         if(y_mov > DEADZONELOWERSIDE){
 
-            if(p1->y_pos - dash_multiplier >= 2){
+            if(p1->y_pos - dash_multiplier > CHARACTER_PADDING_LEFT_UP){
                 p1->y_pos -= dash_multiplier;
             }
 
         } 
         if(y_mov < DEADZONEHIGHERSIDE) {
 
-            if (p1->y_pos + dash_multiplier < 62){
+            if (p1->y_pos + dash_multiplier < SSD1306_HEIGHT - CHARACTER_PADDING_DOWN_RIGHT){
                 p1->y_pos += dash_multiplier;
             }
         
@@ -105,27 +112,27 @@ void rand_move(struct player *enemy){
     uint8_t dir = (uint8_t)(get_rand_32() % 4);
     switch (dir){
         case 0:
-            if (enemy->x_pos > 5)
+            if (enemy->x_pos - DASH_MOV > CHARACTER_PADDING_LEFT_UP)
             {
-                enemy->x_pos -= 3;
+                enemy->x_pos -= DASH_MOV;
             }
             break;
         case 1:
-            if (enemy->y_pos > 5)
+            if (enemy->y_pos - DASH_MOV > CHARACTER_PADDING_LEFT_UP)
             {
-                enemy->y_pos -= 3;
+                enemy->y_pos -= DASH_MOV;
             }
             break;
         case 2:
-            if (enemy->x_pos < 59)
+            if (enemy->x_pos + DASH_MOV < SSD1306_WIDTH - CHARACTER_PADDING_DOWN_RIGHT)
             {
-                enemy->x_pos += 3;
+                enemy->x_pos += DASH_MOV;
             }
             break;
         case 3:
-            if (enemy->y_pos < 123)
+            if (enemy->y_pos + DASH_MOV < SSD1306_HEIGHT - CHARACTER_PADDING_DOWN_RIGHT)
             {
-                enemy->y_pos += 3;
+                enemy->y_pos += DASH_MOV;
             }
             break;
         default:
@@ -169,6 +176,65 @@ void player_shoot(struct player *p1, struct player *enemy1, struct player *enemy
 }
 
 
+//IT THINK THIS IS RIGHT NOW
+//function finds the index of bytes of each character 
+//each character has a width of 8 bytes stacked vertically 
+//we want one byte adjacent to the right 
+//adjacent bytes are to compensate for misallignment   
+void bytes_of_characters(struct player *character, uint8_t *byte_list){
+    
+    uint8_t byte_column = character->x_pos / 8;
+    uint8_t bytes_in_row = SSD1306_WIDTH / 8;
+
+ 
+    for(uint8_t i = 0; i < 16; i += 2){
+        byte_list[i] = (byte_column + (character->y_pos + i / 2) * bytes_in_row);
+        byte_list[i + 1] = (byte_column + 1 + (character->y_pos + i / 2) * bytes_in_row);
+        
+    }  
+
+}
+
+//CHECKED
+void update_character_in_buff(struct player *character, uint8_t *buf, uint8_t *img){
+    
+    //byte_list stores the indexes in the image buffer where the image should go based on character location 
+    uint8_t byte_list[16];
+    bytes_of_characters(character, byte_list);
+
+    //copies each row(single byte) in chracter image twice to the image buffer
+    //two bytes needed to compensate for missallignment 
+    //if x.pos % 8 != 8, the image will be slip into two bytes
+    for(uint8_t i = 0; i < 16; i +=2){
+        buf[byte_list[i]] |= (img[i/2] >> (character->x_pos % 8));
+        buf[byte_list[i + 1]] |= (img[i/2] << (8 - character->x_pos % 8));            
+    }
+
+}
+
+
+//CHECKED
+void render_screen(uint8_t *buf, struct player *p1, 
+    struct player *enemy1, struct player *enemy2, struct render_area *frame_area){
+    
+    //making the buffer all 0s 
+    memset(buf, 0, SSD1306_BUF_LEN);
+
+    //updating the player in image buffer
+    update_character_in_buff(p1, buf, player_img);
+
+    //checking if enemies are still alive and updating them in the image buffer 
+    if(enemy1->alive){
+        update_character_in_buff(enemy1, buf, enemy1_img);
+    }
+    if(enemy2->alive){
+        update_character_in_buff(enemy2, buf, enemy2_img);
+    }
+
+    render(buf, frame_area);
+}
+
+
 int main()
 {
     stdio_init_all();
@@ -202,8 +268,7 @@ int main()
 
     // zero the entire display
     uint8_t buf[SSD1306_BUF_LEN];
-    memset(buf, 0, SSD1306_BUF_LEN);
-    render(buf, &frame_area);
+    render_screen(buf, &p1, &enemy1, &enemy2, &frame_area);
 
     while (true) {
         a_pressed = gpio_get(GREENBUTTON);
@@ -227,15 +292,7 @@ int main()
         printf("Enemy 1 pos: x = %d y = %d alive: %d\n", enemy1.x_pos, enemy1.y_pos, enemy1.alive);
         printf("Enemy 2 pos: x = %d y = %d alive: %d\n", enemy2.x_pos, enemy2.y_pos, enemy2.alive);
 
-
-        // intro sequence: flash the screen 3 times
-        for (int i = 0; i < 3; i++) {
-            SSD1306_send_cmd(SSD1306_SET_ALL_ON);    // Set all pixels on
-            sleep_ms(500);
-            SSD1306_send_cmd(SSD1306_SET_ENTIRE_ON); // go back to following RAM for pixel state
-            sleep_ms(500);
-        }
-
+        render_screen(buf, &p1, &enemy1, &enemy2, &frame_area);
 
         sleep_ms(500);
     }
