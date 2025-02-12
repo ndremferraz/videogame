@@ -268,9 +268,12 @@ int main()
 
     // zero the entire display
     uint8_t buf[SSD1306_BUF_LEN];
-    render_screen(buf, &p1, &enemy1, &enemy2, &frame_area);
+    memset(buf, 0, SSD1306_BUF_LEN);
+    render(buf, &frame_area);
+    //render_screen(buf, &p1, &enemy1, &enemy2, &frame_area);
 
     while (true) {
+        //print_bits(buf, SSD1306_BUF_LEN);
         a_pressed = gpio_get(GREENBUTTON);
         b_pressed = gpio_get(YELLOWBUTTON);
         c_pressed = gpio_get(REDBUTTON);
@@ -287,13 +290,26 @@ int main()
         
 
 
-        printf("GREEN:%d YELLOW:%d RED:%d BLUE:%d X:%d Y:%d\n", a_pressed, b_pressed, c_pressed, d_pressed, x_read, y_read);
-        printf("Player 1 pos: x = %d y = %d\n", p1.x_pos, p1.y_pos);
-        printf("Enemy 1 pos: x = %d y = %d alive: %d\n", enemy1.x_pos, enemy1.y_pos, enemy1.alive);
-        printf("Enemy 2 pos: x = %d y = %d alive: %d\n", enemy2.x_pos, enemy2.y_pos, enemy2.alive);
+        //printf("GREEN:%d YELLOW:%d RED:%d BLUE:%d X:%d Y:%d\n", a_pressed, b_pressed, c_pressed, d_pressed, x_read, y_read);
+        //printf("Player 1 pos: x = %d y = %d\n", p1.x_pos, p1.y_pos);
+        //printf("Enemy 1 pos: x = %d y = %d alive: %d\n", enemy1.x_pos, enemy1.y_pos, enemy1.alive);
+        //printf("Enemy 2 pos: x = %d y = %d alive: %d\n", enemy2.x_pos, enemy2.y_pos, enemy2.alive);
+        for(uint8_t i = 0; i < 8; i++){
+            buf[i] = player_img[i];
+        }
 
-        render_screen(buf, &p1, &enemy1, &enemy2, &frame_area);
+        for(uint8_t i = 16; i < 24; i++){
+            buf[i] = enemy1_img[i-16];
+        }
 
-        sleep_ms(500);
+        for(uint8_t i = 32; i < 40; i++){
+            buf[i] = enemy2_img[i-32];
+        }
+        
+        render(buf, &frame_area);
+        //update_character_in_buff(&p1, buf, player_img);
+        //render_screen(buf, &p1, &enemy1, &enemy2, &frame_area);
+
+        sleep_ms(2000);
     }
 }
