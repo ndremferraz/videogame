@@ -176,44 +176,37 @@ void player_shoot(struct player *p1, struct player *enemy1, struct player *enemy
 }
 
 
-//IT THINK THIS IS RIGHT NOW
+
 //function finds the index of bytes of each character 
 //each character has a width of 8 bytes stacked vertically 
-//we want one byte adjacent to the right 
+//we want one byte adjacent down 
 //adjacent bytes are to compensate for misallignment   
 void bytes_of_characters(struct player *character, uint8_t *byte_list){
-    
-    uint8_t byte_column = character->x_pos / 8;
-    uint8_t bytes_in_row = SSD1306_WIDTH / 8;
-
  
-    for(uint8_t i = 0; i < 16; i += 2){
-        byte_list[i] = (byte_column + (character->y_pos + i / 2) * bytes_in_row);
-        byte_list[i + 1] = (byte_column + 1 + (character->y_pos + i / 2) * bytes_in_row);
-        
+    for(uint8_t i = 0; i < 8; i++){
+        byte_list[i] = character->x_pos + i + (character->y_pos / 8)* SSD1306_WIDTH; //index of top byte
+        byte_list[i+8] = character->x_pos + i + ((character->y_pos / 8) + 1) * SSD1306_WIDTH; //index of bottom byte
     }  
 
 }
 
-//CHECKED
+//updates the buffer based on character postion given the character image
 void update_character_in_buff(struct player *character, uint8_t *buf, uint8_t *img){
     
     //byte_list stores the indexes in the image buffer where the image should go based on character location 
     uint8_t byte_list[16];
     bytes_of_characters(character, byte_list);
 
-    //copies each row(single byte) in chracter image twice to the image buffer
-    //two bytes needed to compensate for missallignment 
-    //if x.pos % 8 != 8, the image will be slip into two bytes
-    for(uint8_t i = 0; i < 16; i +=2){
-        buf[byte_list[i]] |= (img[i/2] >> (character->x_pos % 8));
-        buf[byte_list[i + 1]] |= (img[i/2] << (8 - character->x_pos % 8));            
+    
+    for(uint8_t i = 0; i < 8; i++){
+        buf[byte_list[i]] |= img[i] << character->y_pos;
+        buf[byte_list[i + 8]] |= img[i] >> 8 - character->x_pos;            
     }
 
 }
 
 
-//CHECKED
+//Updates the screen based on plyaer location 
 void render_screen(uint8_t *buf, struct player *p1, 
     struct player *enemy1, struct player *enemy2, struct render_area *frame_area){
     
@@ -270,7 +263,6 @@ int main()
     uint8_t buf[SSD1306_BUF_LEN];
     memset(buf, 0, SSD1306_BUF_LEN);
     render(buf, &frame_area);
-    //render_screen(buf, &p1, &enemy1, &enemy2, &frame_area);
 
     while (true) {
         //print_bits(buf, SSD1306_BUF_LEN);
@@ -294,22 +286,7 @@ int main()
         //printf("Player 1 pos: x = %d y = %d\n", p1.x_pos, p1.y_pos);
         //printf("Enemy 1 pos: x = %d y = %d alive: %d\n", enemy1.x_pos, enemy1.y_pos, enemy1.alive);
         //printf("Enemy 2 pos: x = %d y = %d alive: %d\n", enemy2.x_pos, enemy2.y_pos, enemy2.alive);
-        for(uint8_t i = 0; i < 8; i++){
-            buf[i] = player_img[i];
-        }
+        render_screen(buf, &p1, &enemy1, &enemy2, &frame_area);
 
-        for(uint8_t i = 16; i < 24; i++){
-            buf[i] = enemy1_img[i-16];
-        }
-
-        for(uint8_t i = 32; i < 40; i++){
-            buf[i] = enemy2_img[i-32];
-        }
-        
-        render(buf, &frame_area);
-        //update_character_in_buff(&p1, buf, player_img);
-        //render_screen(buf, &p1, &enemy1, &enemy2, &frame_area);
-
-        sleep_ms(2000);
     }
 }
