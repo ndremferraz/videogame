@@ -52,20 +52,29 @@ void i2c_setup(){
 //each character has a width of 8 bytes stacked vertically 
 //we want one byte adjacent down 
 //adjacent bytes are to compensate for misallignment   
-void bytes_of_characters(struct player *character, uint8_t *byte_list){
- 
+void bytes_of_characters(struct player *character, uint16_t *byte_list){
+
     for(uint8_t i = 0; i < 8; i++){
         byte_list[i] = character->x_pos + i + (character->y_pos / 8)* SSD1306_WIDTH; //index of top byte
-        byte_list[i+8] = character->x_pos + i + ((character->y_pos / 8) + 1) * SSD1306_WIDTH; //index of bottom byte
-    }  
+        byte_list[i+8] = character->x_pos + i + ((character->y_pos / 8) + 1) * SSD1306_WIDTH; //index of bottom byte  
+    } 
 
+    /* This sequence of print statements just saved my life
+    for(uint8_t i = 0; i < 16; i++){
+        if(i==8){
+            printf("\n");
+        }
+        printf("%d ", byte_list[i]);
+    }
+    printf("\n");
+    */
 }
 
 //updates the buffer based on character postion given the character image
 void update_character_in_buff(struct player *character, uint8_t *buf, uint8_t *img){
     
     //byte_list stores the indexes in the image buffer where the image should go based on character location 
-    uint8_t byte_list[16];
+    uint16_t byte_list[16];
     bytes_of_characters(character, byte_list);
 
     
@@ -73,6 +82,7 @@ void update_character_in_buff(struct player *character, uint8_t *buf, uint8_t *i
         buf[byte_list[i]] |= img[i] << (character->y_pos % 8);
         buf[byte_list[i + 8]] |= img[i] >> (8 - (character->y_pos % 8));            
     }
+
 
 }
 
@@ -96,6 +106,25 @@ void render_screen(uint8_t *buf, struct player *p1,
     }
 
     render(buf, frame_area);
+}
+
+void restart_game(struct player *p1, struct player *enemy1, struct player *enemy2){
+    
+
+    p1->x_pos = 0;
+    p1->y_pos = 0;
+    enemy1->alive = true;
+    enemy2->alive = true; 
+    enemy1->x_pos = rand_spawn('x');
+    enemy2->x_pos = rand_spawn('x');
+    enemy1->y_pos = rand_spawn('y');
+    enemy2->y_pos = rand_spawn('y');
+    
+    SSD1306_send_cmd(SSD1306_SET_INV_DISP);
+    sleep_ms(1000);
+    SSD1306_send_cmd(SSD1306_SET_NORM_DISP);
+
+
 }
 
 
@@ -150,17 +179,23 @@ int main()
         rand_move(&enemy1);
         rand_move(&enemy2);
         player_shoot(&p1, &enemy1, &enemy2,a_pressed,c_pressed);
+        if(!(enemy1.alive) && !(enemy2.alive)){
+            restart_game(&p1, &enemy1, &enemy2);
+        }
         
 
 
-        printf("GREEN:%d YELLOW:%d RED:%d BLUE:%d X:%d Y:%d\n", a_pressed, b_pressed, c_pressed, d_pressed, x_read, y_read);
-        printf("Player 1 pos: x = %d y = %d\n", p1.x_pos, p1.y_pos);
-        printf("Enemy 1 pos: x = %d y = %d alive: %d\n", enemy1.x_pos, enemy1.y_pos, enemy1.alive);
-        printf("Enemy 2 pos: x = %d y = %d alive: %d\n", enemy2.x_pos, enemy2.y_pos, enemy2.alive);
+        
+        //printf("GREEN:%d YELLOW:%d RED:%d BLUE:%d X:%d Y:%d\n", a_pressed, b_pressed, c_pressed, d_pressed, x_read, y_read);
+        //printf("Player 1 pos: x = %d y = %d\n", p1.x_pos, p1.y_pos);
+        //printf("Enemy 1 pos: x = %d y = %d alive: %d\n", enemy1.x_pos, enemy1.y_pos, enemy1.alive);
+        //printf("Enemy 2 pos: x = %d y = %d alive: %d\n", enemy2.x_pos, enemy2.y_pos, enemy2.alive);
+        
         render_screen(buf, &p1, &enemy1, &enemy2, &frame_area);
 
+    
 
-        sleep_ms(500);
+        sleep_ms(50);
 
     }
 }
