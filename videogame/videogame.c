@@ -128,6 +128,7 @@ void restart_game(struct player *p1, struct player *enemy1, struct player *enemy
 }
 
 
+
 int main()
 {
     stdio_init_all();
@@ -195,7 +196,7 @@ int main()
 
     
 
-        sleep_ms(50);
+        sleep_ms(100);
 
     }
 }
