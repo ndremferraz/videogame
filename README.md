@@ -7,4 +7,5 @@ For the creating of the ssd1306.c file I did base myself on the ssd1306 example 
 
 - [x] Code Finished
 - [x] PCB Finished
+- [ ] Ordering PCB
 - [ ] Missing CAD for 3D printed enclosure.
