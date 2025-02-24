@@ -5,4 +5,6 @@
 ### The Code can be found under the videogame subfolder and Schematics and PCB found under PacmanProject(Which was the original Idea)
 For the creating of the ssd1306.c file I did base myself on the ssd1306 example provided by the raspberry pi foundation, the rest is all mine.
 
-### Missing CAD for 3D printed enclosure.
+- [x] Code Finished
+- [x] PCB Finished
+- [ ] Missing CAD for 3D printed enclosure.
