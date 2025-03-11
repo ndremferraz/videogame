@@ -88,14 +88,24 @@ void update_character_in_buff(struct player *character, uint8_t *buf, uint8_t *i
 
 
 //Updates the screen based on plyaer location 
-void render_screen(uint8_t *buf, struct player *p1, 
+void render_screen(uint8_t *buf, struct player *p1,
+    bool a_pressed, bool c_pressed, 
     struct player *enemy1, struct player *enemy2, struct render_area *frame_area){
     
     //making the buffer all 0s 
     memset(buf, 0, SSD1306_BUF_LEN);
 
     //updating the player in image buffer
-    update_character_in_buff(p1, buf, player_img);
+    if(a_pressed){
+        update_character_in_buff(p1, buf, player_img_shooting_down);    
+    }
+    else if(c_pressed){
+        update_character_in_buff(p1, buf, player_img_shooting_right);
+    }
+    else{
+        update_character_in_buff(p1, buf, player_img);
+    }
+    
 
     //checking if enemies are still alive and updating them in the image buffer 
     if(enemy1->alive){
@@ -107,6 +117,7 @@ void render_screen(uint8_t *buf, struct player *p1,
 
     render(buf, frame_area);
 }
+
 
 void restart_game(struct player *p1, struct player *enemy1, struct player *enemy2){
     
@@ -184,19 +195,16 @@ int main()
             restart_game(&p1, &enemy1, &enemy2);
         }
         
-
-
         
         //printf("GREEN:%d YELLOW:%d RED:%d BLUE:%d X:%d Y:%d\n", a_pressed, b_pressed, c_pressed, d_pressed, x_read, y_read);
         //printf("Player 1 pos: x = %d y = %d\n", p1.x_pos, p1.y_pos);
         //printf("Enemy 1 pos: x = %d y = %d alive: %d\n", enemy1.x_pos, enemy1.y_pos, enemy1.alive);
         //printf("Enemy 2 pos: x = %d y = %d alive: %d\n", enemy2.x_pos, enemy2.y_pos, enemy2.alive);
-        
-        render_screen(buf, &p1, &enemy1, &enemy2, &frame_area);
 
+        render_screen(buf, &p1, a_pressed, c_pressed, &enemy1, &enemy2, &frame_area);
     
 
-        sleep_ms(100);
+        sleep_ms(150);
 
     }
 }

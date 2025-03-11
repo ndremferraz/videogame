@@ -14,6 +14,7 @@
 //Alligns the chracter left up
 #define CHARACTER_PADDING_LEFT_UP 0
 #define CHARACTER_PADDING_DOWN_RIGHT 7 
+#define SHOOT_DIST 5
 #define DASH_MOV 3
 
 //basic struct for each player
